@@ -6,16 +6,25 @@ import React, { Component } from 'react';
 import ContactList from './ContactList/ContactList';
 import { Notification } from 'components/Notification/Notification';
 import Filter from './Filter/Filter';
+import { load, save } from 'services/localStorage';
+import contactsItems from 'data/contactsItems';
 
+const localStorageKey = 'contacts';
 class App extends Component {
   state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
+    contacts: [],
     filter: '',
+  };
+
+  getContactFromStorage = () => {
+    const localPhonebookContacts = load(localStorageKey);
+    return localPhonebookContacts
+      ? localPhonebookContacts
+      : this.setContactsInStorage(contactsItems);
+  };
+
+  setContactsInStorage = contactsArray => {
+    save(localStorageKey, contactsArray);
   };
 
   onSubmit = ({ name, number }) => {
@@ -34,12 +43,14 @@ class App extends Component {
       const filteredNumber = contacts.filter(
         contact => contact.number === number
       )[0].name;
-      console.log(filteredNumber);
       alert(`${number} is already in contact with ${filteredNumber} `);
       return;
     }
-    this.setState(({ contacts }) => ({
-      contacts: [newContact, ...contacts],
+    const newContactArray = [newContact, ...contacts];
+
+    this.setContactsInStorage(newContactArray);
+    this.setState(() => ({
+      contacts: newContactArray,
     }));
   };
 
@@ -51,6 +62,7 @@ class App extends Component {
     const newContactList = this.state.contacts.filter(
       contact => contact.id !== id
     );
+    save(localStorageKey, newContactList);
     this.setState({ ...this.state, contacts: newContactList });
   };
 
@@ -66,20 +78,26 @@ class App extends Component {
     }
   };
 
+  componentDidMount() {
+    const myPhonebookContacts = this.getContactFromStorage();
+    this.setState(oldState => ({ ...oldState, contacts: myPhonebookContacts }));
+  }
+
   render() {
     const { wrapper } = styles;
-    const { contacts, filter } = this.state;
+    const { filter } = this.state;
+    const phonebookContacts = this.getContactFromStorage();
     return (
       <div className={wrapper}>
         <Section title="Phonebook">
           <ContactForm onSubmit={this.onSubmit} />
         </Section>
         <Section title="Contacts">
-          {contacts.length > 0 ? (
+          {phonebookContacts.length > 0 ? (
             <>
               <Filter onChange={this.handleFilter} />
               <ContactList
-                contacts={this.setFilterContacts(filter, contacts)}
+                contacts={this.setFilterContacts(filter, phonebookContacts)}
                 removeContact={this.removeContact}
               />
             </>
